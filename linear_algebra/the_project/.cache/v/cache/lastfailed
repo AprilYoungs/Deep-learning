@@ -1,0 +1,11 @@
+{
+  "test.py::LinearRegressionTestCase::test_addScaledRow": true,
+  "test.py::LinearRegressionTestCase::test_augmentMatrix": true,
+  "test.py::LinearRegressionTestCase::test_gj_Solve": true,
+  "test.py::LinearRegressionTestCase::test_matxMultiply": true,
+  "test.py::LinearRegressionTestCase::test_matxRound": true,
+  "test.py::LinearRegressionTestCase::test_scaleRow": true,
+  "test.py::LinearRegressionTestCase::test_shape": true,
+  "test.py::LinearRegressionTestCase::test_swapRows": true,
+  "test.py::LinearRegressionTestCase::test_transpose": true
+}
