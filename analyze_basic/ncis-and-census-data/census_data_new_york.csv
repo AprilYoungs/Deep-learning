@@ -1,0 +1,66 @@
+Fact,Fact Note,data
+"Population estimates, July 1, 2016,  (V2016)",,19745289
+"Population estimates base, April 1, 2010,  (V2016)",,19378110
+"Population, percent change - April 1, 2010 (estimates base) to July 1, 2016,  (V2016)",,0.019
+"Population, Census, April 1, 2010",,19378102
+"Persons under 5 years, percent, July 1, 2016,  (V2016)",,0.059
+"Persons under 5 years, percent, April 1, 2010",,0.06
+"Persons under 18 years, percent, July 1, 2016,  (V2016)",,0.212
+"Persons under 18 years, percent, April 1, 2010",,0.223
+"Persons 65 years and over, percent,  July 1, 2016,  (V2016)",,0.154
+"Persons 65 years and over, percent, April 1, 2010",,0.135
+"Female persons, percent,  July 1, 2016,  (V2016)",,0.514
+"Female persons, percent, April 1, 2010",,0.516
+"White alone, percent, July 1, 2016,  (V2016)",(a),0.699
+"Black or African American alone, percent, July 1, 2016,  (V2016)",(a),0.177
+"American Indian and Alaska Native alone, percent, July 1, 2016,  (V2016)",(a),0.01
+"Asian alone, percent, July 1, 2016,  (V2016)",(a),0.089
+"Native Hawaiian and Other Pacific Islander alone, percent, July 1, 2016,  (V2016)",(a),0.001
+"Two or More Races, percent, July 1, 2016,  (V2016)",,0.025
+"Hispanic or Latino, percent, July 1, 2016,  (V2016)",(b),0.19
+"White alone, not Hispanic or Latino, percent, July 1, 2016,  (V2016)",,0.558
+"Veterans, 2011-2015",,828586
+"Foreign born persons, percent, 2011-2015",,0.225
+"Housing units,  July 1, 2016,  (V2016)",,8231687
+"Housing units, April 1, 2010",,8108103
+"Owner-occupied housing unit rate, 2011-2015",,0.536
+"Median value of owner-occupied housing units, 2011-2015",,283400
+"Median selected monthly owner costs -with a mortgage, 2011-2015",,2022
+"Median selected monthly owner costs -without a mortgage, 2011-2015",,709
+"Median gross rent, 2011-2015",,1132
+"Building permits, 2016",,33711
+"Households, 2011-2015",,7262279
+"Persons per household, 2011-2015",,2.63
+"Living in same house 1 year ago, percent of persons age 1 year+, 2011-2015",,0.891
+"Language other than English spoken at home, percent of persons age 5 years+, 2011-2015",,0.304
+"High school graduate or higher, percent of persons age 25 years+, 2011-2015",,0.856
+"Bachelor's degree or higher, percent of persons age 25 years+, 2011-2015",,0.342
+"With a disability, under age 65 years, percent, 2011-2015",,0.074
+"Persons  without health insurance, under age 65 years, percent",,0.07
+"In civilian labor force, total, percent of population age 16 years+, 2011-2015",,0.633
+"In civilian labor force, female, percent of population age 16 years+, 2011-2015",,0.587
+"Total accommodation and food services sales, 2012 ($1,000)",(c),49285508
+"Total health care and social assistance receipts/revenue, 2012 ($1,000)",(c),155666053
+"Total manufacturers shipments, 2012 ($1,000)",(c),148879931
+"Total merchant wholesaler sales, 2012 ($1,000)",(c),341734970
+"Total retail sales, 2012 ($1,000)",(c),251167736
+"Total retail sales per capita, 2012",(c),12834
+"Mean travel time to work (minutes), workers age 16 years+, 2011-2015",,32.3
+"Median household income (in 2015 dollars), 2011-2015",,59269
+"Per capita income in past 12 months (in 2015 dollars), 2011-2015",,33236
+"Persons in poverty, percent",,0.147
+"Total employer establishments, 2015",Includes data not distributed by county.,540298
+"Total employment, 2015",Includes data not distributed by county.,7998994
+"Total annual payroll, 2015 ($1,000)",Includes data not distributed by county.,513083321
+"Total employment, percent change, 2014-2015",Includes data not distributed by county.,0.018
+"Total nonemployer establishments, 2015",,1685636
+"All firms, 2012",,2008988
+"Men-owned firms, 2012",,1139910
+"Women-owned firms, 2012",,725709
+"Minority-owned firms, 2012",,709021
+"Nonminority-owned firms, 2012",,1248304
+"Veteran-owned firms, 2012",,137532
+"Nonveteran-owned firms, 2012",,1811544
+"Population per square mile, 2010",,411.2
+"Land area in square miles, 2010",,47126.4
+FIPS Code,,"""36"""
