@@ -25,7 +25,7 @@ class Agent:
         """
 
         if i_episode != None and not self.fix_epsilon:
-            self.epsilon = 1/i_episode
+            self.epsilon = max(0.2-0.001*i_episode, 0)
 
         probs = np.ones(self.nA)*self.epsilon/self.nA
         probs[np.argmax(self.Q[state])] += 1-self.epsilon
@@ -64,5 +64,5 @@ class Agent:
         - done: whether the episode is complete (True or False)
         """
         expected_Q = np.dot(self.get_prob(state),self.Q[next_state])
-        # max_Q = np.max(self.Q[next_state])
+#         max_Q = np.max(self.Q[next_state])
         self.Q[state][action] += self.alpha*(reward + self.gamma*expected_Q - self.Q[state][action])
