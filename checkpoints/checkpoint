@@ -1,0 +1,2 @@
+model_checkpoint_path: "kongfumater.ckpt"
+all_model_checkpoint_paths: "kongfumater.ckpt"
