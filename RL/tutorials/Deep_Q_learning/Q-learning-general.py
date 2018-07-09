@@ -14,12 +14,13 @@
 
 import gym
 import numpy as np
+import pickle
 
 # Create the Cart-Pole game environment
 env = gym.make('KungFuMaster-ram-v0')
 
 # Number of possible actions
-print('Number of possible actions:', env.action_space.n)
+# print('Number of possible actions:', env.action_space.n)
 
 
 # We interact with the simulation through `env`.  You can see how many actions are possible from `env.action_space.n`, and to get a random action you can use `env.action_space.sample()`.  Passing in an action as an integer to `env.step` will generate the next step in the simulation.  This is general to all Gym games.
@@ -49,8 +50,8 @@ while True:
 # In[3]:
 
 
-print('Actions:', actions)
-print('Rewards:', rewards)
+# print('Actions:', actions)
+# print('Rewards:', rewards)
 
 
 # The game resets after the pole has fallen past a certain angle. For each step while the game is running, it returns a reward of 1.0. The longer the game runs, the more reward we get. Then, our network's goal is to maximize the reward by keeping the pole vertical. It will do this by moving the cart to the left and the right.
@@ -90,9 +91,11 @@ class QNetwork:
             # ReLU hidden layers
             self.fc1 = tf.contrib.layers.fully_connected(self.inputs_, hidden_size)
             self.fc2 = tf.contrib.layers.fully_connected(self.fc1, hidden_size)
+            self.fc3 = tf.contrib.layers.fully_connected(self.fc2, hidden_size)
+            self.fc4 = tf.contrib.layers.fully_connected(self.fc3, hidden_size)
 
             # Linear output layer
-            self.output = tf.contrib.layers.fully_connected(self.fc2, action_size,
+            self.output = tf.contrib.layers.fully_connected(self.fc4, action_size,
                                                             activation_fn=None)
 
             ### Train with loss (targetQ - Q)^2
@@ -177,7 +180,7 @@ learning_rate = 0.0001         # Q-network learning rate
 
 # Memory parameters
 memory_size = 10000            # memory capacity
-batch_size = 20                # experience mini-batch size
+batch_size = 50                # experience mini-batch size
 pretrain_length = batch_size   # number experiences to pretrain the memory
 
 
@@ -343,6 +346,8 @@ def running_mean(x, N):
 
 # In[18]:
 
+with open('DQ_general_reward', 'w') as file:
+    pickle.dump(rewards_list, file)
 
 eps, rews = np.array(rewards_list).T
 smoothed_rews = running_mean(rews, 10)
