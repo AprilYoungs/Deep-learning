@@ -5,6 +5,7 @@ from keras import backend as K
 import numpy as np
 import copy
 
+
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
@@ -89,10 +90,10 @@ class Actor:
         net = layers.Dense(units=32, activation='relu')(net)
 
         # narrow the network to the action size
-        raw_actions = layers.Dense(units=self.aciton_size, activation='sigmoid', name='raw_actions')(net)
+        raw_actions = layers.Dense(units=self.aciton_size, activation='tanh', name='raw_actions')(net)
 
         # Scale outpout to proper range
-        actions = layers.Lambda(lambda x: (x * self.action_range) + self.action_low, name='actions')(raw_actions)
+        actions = layers.Lambda(lambda x: (x/2 * self.action_range) + (self.action_low + self.action_high)/2, name='actions')(raw_actions)
 
         # Create Keras model
         self.model = models.Model(inputs=states, outputs=actions)
@@ -107,7 +108,6 @@ class Actor:
 
         optimizer = optimizers.Adam()
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
-        print("Actor updates_op", updates_op)
         self.train_fn = K.function(
                         inputs=[self.model.input, action_gradients, K.learning_phase()],
                         outputs=[],
@@ -200,17 +200,24 @@ class DDPG():
         self.gamma = 0.99 # dicount factor
         self.tau = 0.01 # for soft update of target parameters
 
+        self.best_score = -np.inf
+
 
     def reset_episode(self):
         self.noise.reset()
         state = self.task.reset()
         self.last_state = state
+        self.score = 0
         return state
 
     def step(self, action, reward, next_state, done):
 
         # save experience
         self.memory.add(self.last_state, action, reward, next_state, done)
+        self.score += reward
+
+        if done:
+            self.best_score = max(self.best_score, self.score)
 
         #Learn, if enough samples are available
         if len(self.memory) > self.batch_size:
