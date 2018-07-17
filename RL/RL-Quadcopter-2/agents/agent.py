@@ -85,9 +85,9 @@ class Actor:
         states = layers.Input(shape=(self.state_size, ), name='states')
 
 
-        net = layers.Dense(units=32, activation='relu')(states)
-        net = layers.Dense(units=64, activation='relu')(net)
-        net = layers.Dense(units=32, activation='relu')(net)
+        net = layers.Dense(units=512, activation='relu')(states)
+        net = layers.Dense(units=256, activation='relu')(net)
+
 
         # narrow the network to the action size
         raw_actions = layers.Dense(units=self.aciton_size, activation='tanh', name='raw_actions')(net)
@@ -106,7 +106,7 @@ class Actor:
 
         # Any other Loss
 
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(lr=0.0001)
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = K.function(
                         inputs=[self.model.input, action_gradients, K.learning_phase()],
@@ -137,11 +137,11 @@ class Critic:
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net_states = layers.Dense(units=32, activation='relu')(states)
-        net_states = layers.Dense(units=64, activation='relu')(net_states)
+        net_states = layers.Dense(units=256, activation='relu')(states)
+        net_states = layers.Dense(units=512, activation='relu')(net_states)
 
-        net_actions = layers.Dense(units=32, activation='relu')(actions)
-        net_actions = layers.Dense(units=64, activation='relu')(net_actions)
+        net_actions = layers.Dense(units=256, activation='relu')(actions)
+        net_actions = layers.Dense(units=512, activation='relu')(net_actions)
 
         # Try different layers
 
@@ -198,7 +198,7 @@ class DDPG():
 
         # Algorithm parameters
         self.gamma = 0.99 # dicount factor
-        self.tau = 0.01 # for soft update of target parameters
+        self.tau = 0.001 # for soft update of target parameters
 
         self.best_score = -np.inf
 
