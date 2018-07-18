@@ -4,8 +4,8 @@ from keras import layers, models, optimizers
 from keras import backend as K
 import numpy as np
 import copy
-import os
 import pickle
+import os
 
 
 class OUNoise:
@@ -87,8 +87,8 @@ class Actor:
         states = layers.Input(shape=(self.state_size, ), name='states')
 
 
-        net = layers.Dense(units=32, activation='relu')(states)
-        net = layers.Dense(units=64, activation='relu')(net)
+        net = layers.Dense(units=64, activation='relu')(states)
+        net = layers.Dense(units=128, activation='relu')(net)
 
 
         # narrow the network to the action size
@@ -139,11 +139,11 @@ class Critic:
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net_states = layers.Dense(units=32, activation='relu')(states)
-        net_states = layers.Dense(units=64, activation='relu')(net_states)
+        net_states = layers.Dense(units=64, activation='relu')(states)
+        net_states = layers.Dense(units=128, activation='relu')(net_states)
 
-        net_actions = layers.Dense(units=32, activation='relu')(actions)
-        net_actions = layers.Dense(units=64, activation='relu')(net_actions)
+        net_actions = layers.Dense(units=64, activation='relu')(actions)
+        net_actions = layers.Dense(units=128, activation='relu')(net_actions)
 
         # Try different layers
 
@@ -168,12 +168,12 @@ class Critic:
 
 class DDPG():
     """Reinforcement learning agent that learns using DDPG"""
-    def __init__(self, task, gym=False):
+    def __init__(self, task):
         self.task = task
-        self.state_size = task.observation_space.shape[0] if gym else task.state_size
-        self.action_size = task.action_space.shape[0] if gym else task.action_size
-        self.action_low = task.action_space.low if gym else task.action_low
-        self.action_high = task.action_space.high if gym else task.action_high
+        self.state_size = task.observation_space.shape[0]
+        self.action_size = task.action_space.shape[0]
+        self.action_low = task.action_space.low
+        self.action_high = task.action_space.high
 
         # Actor
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
