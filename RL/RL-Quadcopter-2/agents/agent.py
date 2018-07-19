@@ -1,6 +1,6 @@
 import random
 from collections import namedtuple, deque
-from keras import layers, models, optimizers
+from keras import layers, models, optimizers, initializers
 from keras import backend as K
 import numpy as np
 import copy
@@ -89,20 +89,20 @@ class Actor:
         net = layers.BatchNormalization()(states)
 
         net = layers.Dense(units=400,
-                           kernel_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
-                           bias_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
         net = layers.Activation('relu')(net)
         net = layers.Dense(units=300,
-                           kernel_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)),
-                           bias_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net)
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net)
         net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
 
 
         # narrow the network to the action size
         raw_actions = layers.Dense(units=self.aciton_size,
-                                   kernel_initializer=np.random.uniform(-3e3,3e-3),
-                                   bias_initializer=np.random.uniform(-3e-4,3e-4),
+                                   kernel_initializer=initializers.random_uniform(-3e3,3e-3),
+                                   bias_initializer=initializers.random_uniform(-3e-4,3e-4),
                                    activation='tanh',
                                    name='raw_actions')(net)
 
@@ -153,26 +153,26 @@ class Critic:
 
         net_states = layers.BatchNormalization()(states)
         net_states = layers.Dense(units=400,
-                            kernel_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
-                            bias_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net_states)
+                            kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
+                            bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net_states)
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
         net_states = layers.Dense(units=300,
-                                  kernel_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)),
-                                  bias_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
+                                  kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
+                                  bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
 
 
         net_actions = layers.BatchNormalization()(actions)
         net_actions = layers.Dense(units=400,
-                                   kernel_initializer=np.random.uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
-                                   bias_initializer=np.random.uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
+                                   kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
+                                   bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
         net_actions = layers.BatchNormalization()(net_actions)
         net_actions = layers.Activation('relu')(net_actions)
         net_actions = layers.Dense(units=300,
-                                   kernel_initializer=np.random.uniform(-1/np.sqrt(300),1/np.sqrt(300)),
-                                   bias_initializer=np.random.uniform(-1/np.sqrt(300),1/np.sqrt(300)))(net_actions)
+                                   kernel_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
+                                   bias_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)))(net_actions)
         net_actions = layers.BatchNormalization()(net_actions)
         net_actions = layers.Activation('relu')(net_actions)
 
@@ -183,8 +183,8 @@ class Critic:
         net = layers.Activation('relu')(net)
 
         Q_values = layers.Dense(units=1,
-                                kernel_initializer=np.random.uniform(-3e3,3e-3),
-                                bias_initializer=np.random.uniform(-3e-4,3e-4),
+                                kernel_initializer=initializers.random_uniform(-3e3,3e-3),
+                                bias_initializer=initializers.random_uniform(-3e-4,3e-4),
                                 name='q_values')(net)
 
         # Create keras model
