@@ -86,13 +86,25 @@ class Actor:
         """Build an actor (policy) network that maps states -> actions."""
         states = layers.Input(shape=(self.state_size, ), name='states')
 
+        net = layers.BatchNormalization()(states)
 
-        net = layers.Dense(units=32, activation='relu')(states)
-        net = layers.Dense(units=64, activation='relu')(net)
+        net = layers.Dense(units=400,
+                           kernel_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
+                           bias_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=300,
+                           kernel_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)),
+                           bias_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net)
+        net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
 
 
         # narrow the network to the action size
-        raw_actions = layers.Dense(units=self.aciton_size, activation='tanh', name='raw_actions')(net)
+        raw_actions = layers.Dense(units=self.aciton_size,
+                                   kernel_initializer=np.random.uniform(-3e3,3e-3),
+                                   bias_initializer=np.random.uniform(-3e-4,3e-4),
+                                   activation='tanh',
+                                   name='raw_actions')(net)
 
         # Scale outpout to proper range
         actions = layers.Lambda(lambda x: (x/2 * self.action_range) + (self.action_low + self.action_high)/2, name='actions')(raw_actions)
@@ -139,11 +151,30 @@ class Critic:
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net_states = layers.Dense(units=32, activation='relu')(states)
-        net_states = layers.Dense(units=64, activation='relu')(net_states)
+        net_states = layers.BatchNormalization()(states)
+        net_states = layers.Dense(units=400,
+                            kernel_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
+                            bias_initializer=np.random.uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net_states)
+        net_states = layers.BatchNormalization()(net_states)
+        net_states = layers.Activation('relu')(net_states)
+        net_states = layers.Dense(units=300,
+                                  kernel_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)),
+                                  bias_initializer=np.random.uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
+        net_states = layers.BatchNormalization()(net_states)
+        net_states = layers.Activation('relu')(net_states)
 
-        net_actions = layers.Dense(units=32, activation='relu')(actions)
-        net_actions = layers.Dense(units=64, activation='relu')(net_actions)
+
+        net_actions = layers.BatchNormalization()(actions)
+        net_actions = layers.Dense(units=400,
+                                   kernel_initializer=np.random.uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
+                                   bias_initializer=np.random.uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
+        net_actions = layers.BatchNormalization()(net_actions)
+        net_actions = layers.Activation('relu')(net_actions)
+        net_actions = layers.Dense(units=300,
+                                   kernel_initializer=np.random.uniform(-1/np.sqrt(300),1/np.sqrt(300)),
+                                   bias_initializer=np.random.uniform(-1/np.sqrt(300),1/np.sqrt(300)))(net_actions)
+        net_actions = layers.BatchNormalization()(net_actions)
+        net_actions = layers.Activation('relu')(net_actions)
 
         # Try different layers
 
@@ -151,7 +182,10 @@ class Critic:
         net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
 
-        Q_values = layers.Dense(units=1, name='q_values')(net)
+        Q_values = layers.Dense(units=1,
+                                kernel_initializer=np.random.uniform(-3e3,3e-3),
+                                bias_initializer=np.random.uniform(-3e-4,3e-4),
+                                name='q_values')(net)
 
         # Create keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
@@ -194,7 +228,7 @@ class DDPG():
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         #Replay memory
-        self.buffer_size = int(1e5)
+        self.buffer_size = int(1e6)
         self.batch_size = 64
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
@@ -229,11 +263,11 @@ class DDPG():
         # Roll over last state and action
         self.last_state = next_state
 
-    def act(self, state):
+    def act(self, state, train=True):
         """Return actions for given state(s) as per current policy."""
         state = np.reshape(state, [-1, self.state_size])
         action = self.actor_local.model.predict(state)[0]
-        return list(action + self.noise.sample()) # noise for exploration
+        return list(action + self.noise.sample()) if train else list(action) # noise for exploration
 
     def learn(self, experience):
         """Update policy and value parameters using given batch of experience tuples."""
