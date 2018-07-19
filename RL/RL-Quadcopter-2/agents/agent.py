@@ -148,6 +148,7 @@ class Critic:
     def build_model(self):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         # Input layers
+
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
@@ -158,29 +159,22 @@ class Critic:
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
         net_states = layers.Dense(units=300,
-                                  kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
-                                  bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
-        net_states = layers.BatchNormalization()(net_states)
-        net_states = layers.Activation('relu')(net_states)
+                            kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
+                            bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
+
 
 
         net_actions = layers.BatchNormalization()(actions)
-        net_actions = layers.Dense(units=400,
-                                   kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
-                                   bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
-        net_actions = layers.BatchNormalization()(net_actions)
-        net_actions = layers.Activation('relu')(net_actions)
         net_actions = layers.Dense(units=300,
-                                   kernel_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
-                                   bias_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)))(net_actions)
-        net_actions = layers.BatchNormalization()(net_actions)
-        net_actions = layers.Activation('relu')(net_actions)
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
 
         # Try different layers
 
         #Combine state and action
         net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
+
 
         Q_values = layers.Dense(units=1,
                                 kernel_initializer=initializers.random_uniform(-3e3,3e-3),
@@ -190,6 +184,8 @@ class Critic:
         # Create keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
+
+        ## Add l2 weight decay here
         optimizer = optimizers.Adam()
         self.model.compile(optimizer=optimizer, loss='mse')
 
