@@ -1,11 +1,12 @@
 import random
 from collections import namedtuple, deque
-from keras import layers, models, optimizers
+from keras import layers, models, optimizers, initializers
 from keras import backend as K
+import tensorflow as tf
 import numpy as np
 import copy
-import pickle
 import os
+import pickle
 
 
 class OUNoise:
@@ -86,13 +87,30 @@ class Actor:
         """Build an actor (policy) network that maps states -> actions."""
         states = layers.Input(shape=(self.state_size, ), name='states')
 
+        net = layers.BatchNormalization()(states)
 
-        net = layers.Dense(units=64, activation='relu')(states)
-        net = layers.Dense(units=128, activation='relu')(net)
+        net = layers.Dense(units=16,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=16,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)))(net)
+        net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=16,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)))(net)
+        net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
 
 
         # narrow the network to the action size
-        raw_actions = layers.Dense(units=self.aciton_size, activation='tanh', name='raw_actions')(net)
+        raw_actions = layers.Dense(units=self.aciton_size,
+                                   kernel_initializer=initializers.random_uniform(-3e3,3e-3),
+                                   bias_initializer=initializers.random_uniform(-3e-4,3e-4),
+                                   activation='tanh',
+                                   name='raw_actions')(net)
 
         # Scale outpout to proper range
         actions = layers.Lambda(lambda x: (x/2 * self.action_range) + (self.action_low + self.action_high)/2, name='actions')(raw_actions)
@@ -136,26 +154,40 @@ class Critic:
     def build_model(self):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         # Input layers
+
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net_states = layers.Dense(units=64, activation='relu')(states)
-        net_states = layers.Dense(units=128, activation='relu')(net_states)
+        net = layers.concatenate([states, actions])
+        net = layers.BatchNormalization()(net)
 
-        net_actions = layers.Dense(units=64, activation='relu')(actions)
-        net_actions = layers.Dense(units=128, activation='relu')(net_actions)
-
-        # Try different layers
-
-        #Combine state and action
-        net = layers.Add()([net_states, net_actions])
+        net = layers.Dense(units=32,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size+self.state_size),1/np.sqrt(self.action_size+self.state_size)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size+self.state_size),1/np.sqrt(self.action_size+self.state_size))(net)
+        net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=32,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)))(net)
+        net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=32,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)))(net)
+        net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
 
-        Q_values = layers.Dense(units=1, name='q_values')(net)
+
+        Q_values = layers.Dense(units=1,
+                                kernel_initializer=initializers.random_uniform(-3e3,3e-3),
+                                bias_initializer=initializers.random_uniform(-3e-4,3e-4),
+                                name='q_values')(net)
 
         # Create keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
+
+        ## Add l2 weight decay here
         optimizer = optimizers.Adam()
         self.model.compile(optimizer=optimizer, loss='mse')
 
@@ -168,12 +200,12 @@ class Critic:
 
 class DDPG():
     """Reinforcement learning agent that learns using DDPG"""
-    def __init__(self, task):
+    def __init__(self, task, gym=False):
         self.task = task
-        self.state_size = task.observation_space.shape[0]
-        self.action_size = task.action_space.shape[0]
-        self.action_low = task.action_space.low
-        self.action_high = task.action_space.high
+        self.state_size = task.observation_space.shape[0] if gym else task.state_size
+        self.action_size = task.action_space.shape[0] if gym else task.action_size
+        self.action_low = task.action_space.low if gym else task.action_low
+        self.action_high = task.action_space.high if gym else task.action_high
 
         # Actor
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
@@ -194,7 +226,7 @@ class DDPG():
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         #Replay memory
-        self.buffer_size = int(1e5)
+        self.buffer_size = int(1e6)
         self.batch_size = 64
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
@@ -229,11 +261,11 @@ class DDPG():
         # Roll over last state and action
         self.last_state = next_state
 
-    def act(self, state):
+    def act(self, state, train=True):
         """Return actions for given state(s) as per current policy."""
         state = np.reshape(state, [-1, self.state_size])
         action = self.actor_local.model.predict(state)[0]
-        return list(action + self.noise.sample()) # noise for exploration
+        return list(action + self.noise.sample()) if train else list(action) # noise for exploration
 
     def learn(self, experience):
         """Update policy and value parameters using given batch of experience tuples."""

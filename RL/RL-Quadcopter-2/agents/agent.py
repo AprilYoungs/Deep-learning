@@ -2,6 +2,7 @@ import random
 from collections import namedtuple, deque
 from keras import layers, models, optimizers, initializers
 from keras import backend as K
+import tensorflow as tf
 import numpy as np
 import copy
 import os
@@ -169,11 +170,16 @@ class Critic:
                            kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
                            bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
 
-        # Try different layers
+
 
         #Combine state and action
         net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
+        net = layers.Dense(units=300,
+                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
+                           bias_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
+                           activation='relu')(net)
+
 
 
         Q_values = layers.Dense(units=1,
