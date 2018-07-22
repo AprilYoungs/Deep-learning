@@ -1,6 +1,7 @@
 import random
 from collections import namedtuple, deque
-from keras import layers, models, optimizers, initializers
+from keras import layers, models, optimizers, initializers, regularizers
+from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 import tensorflow as tf
 import numpy as np
@@ -74,7 +75,7 @@ class Actor:
             aciton_high (array):Max values of actions
         """
         self.state_size = state_size
-        self.aciton_size = action_size
+        self.action_size = action_size
         self.action_low = action_low
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
@@ -87,34 +88,34 @@ class Actor:
         """Build an actor (policy) network that maps states -> actions."""
         states = layers.Input(shape=(self.state_size, ), name='states')
 
-        net = layers.BatchNormalization()(states)
+       # Kernel initializer with fan-in mode and scale of 1.0
+        kernel_initializer = initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='uniform', seed=None)
 
-        net = layers.Dense(units=400,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=300,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
+        # Add hidden layers
+        net = BatchNormalization()(states)
+        net = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(states)
+        net = BatchNormalization()(net)
+        net = layers.Dense(units=300, activation='relu', kernel_initializer=kernel_initializer)(net)
+        net = BatchNormalization()(net)
+        
+        # Kernel initializer for final output layer: initialize final layer weights from 
+        # a uniform distribution of [-0.003, 0.003]
+        final_layer_initializer = initializers.RandomUniform(minval=-0.003, maxval=0.003, seed=None)
+        
+        # Add final output layer with sigmoid activation
+        raw_actions = layers.Dense(units=self.action_size, activation='tanh', name='raw_actions', kernel_initializer=final_layer_initializer)(net)
+        
+        # final action
+        middle_value_of_action_range = self.action_low +self.action_range/2
+        actions = layers.Lambda(lambda x: (x * self.action_range) + middle_value_of_action_range,
+            name='actions')(raw_actions)
 
-
-        # narrow the network to the action size
-        raw_actions = layers.Dense(units=self.aciton_size,
-                                   kernel_initializer=initializers.random_uniform(-3e3,3e-3),
-                                   bias_initializer=initializers.random_uniform(-3e-4,3e-4),
-                                   activation='tanh',
-                                   name='raw_actions')(net)
-
-        # Scale outpout to proper range
-        actions = layers.Lambda(lambda x: (x/2 * self.action_range) + (self.action_low + self.action_high)/2, name='actions')(raw_actions)
 
         # Create Keras model
         self.model = models.Model(inputs=states, outputs=actions)
 
         # Define loss function using action value gradients
-        action_gradients = layers.Input(shape=(self.aciton_size, ))
+        action_gradients = layers.Input(shape=(self.action_size, ))
 
         #### Why this function ?? (Q value) gradients
         loss = K.mean(-action_gradients * actions)
@@ -153,46 +154,42 @@ class Critic:
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net_states = layers.BatchNormalization()(states)
-        net_states = layers.Dense(units=400,
-                            kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
-                            bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net_states)
-        net_states = layers.BatchNormalization()(net_states)
-        net_states = layers.Activation('relu')(net_states)
-        net_states = layers.Dense(units=300,
-                            kernel_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)),
-                            bias_initializer=initializers.random_uniform(-1/np.sqrt(400),1/np.sqrt(400)))(net_states)
+        # Kernel initializer with fan-in mode and scale of 1.0
+        kernel_initializer = initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='uniform', seed=None)
+        # Kernel L2 loss regularizer with penalization param of 0.01
+        kernel_regularizer = regularizers.l2(0.01)
+        
+        # Add hidden layer(s) for state pathway
+        net_states = BatchNormalization()(states)
+        net_states = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(net_states)
+        net_states = BatchNormalization()(net_states)
 
+        # Add hidden layer(s) for action pathway
+        net_actions = BatchNormalization()(actions)
+        net_actions = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(actions)
+        net_actions = BatchNormalization()(net_actions)
 
-
-        net_actions = layers.BatchNormalization()(actions)
-        net_actions = layers.Dense(units=300,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size),1/np.sqrt(self.action_size)))(net_actions)
-
-
-
-        #Combine state and action
+        # Combine state and action pathways. The two layers can first be processed via separate 
+        # "pathways" (mini sub-networks), but eventually need to be combined.
         net = layers.Add()([net_states, net_actions])
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=300,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(300),1/np.sqrt(300)),
-                           activation='relu')(net)
 
+        # Add more layers to the combined network if needed
+        net = layers.Dense(units=300, activation='relu', kernel_initializer=kernel_initializer)(net)
 
-
-        Q_values = layers.Dense(units=1,
-                                kernel_initializer=initializers.random_uniform(-3e3,3e-3),
-                                bias_initializer=initializers.random_uniform(-3e-4,3e-4),
-                                name='q_values')(net)
+        # Kernel initializer for final output layer: initialize final layer weights from 
+        # a uniform distribution of [-0.003, 0.003]
+        final_layer_initializer = initializers.RandomUniform(minval=-0.003, maxval=0.003, seed=None)
+        
+        # Add final output layer to produce action values (Q values). The final output 
+        # of this model is the Q-value for any given (state, action) pair. Use a 
+        # kernel L2 loss regularizer at this layer as well, with L2=0.01
+        Q_values = layers.Dense(units=1, activation=None, name='q_values', kernel_initializer=final_layer_initializer, kernel_regularizer=kernel_regularizer)(net)
 
         # Create keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
 
-        ## Add l2 weight decay here
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(lr=0.001)
         self.model.compile(optimizer=optimizer, loss='mse')
 
         # Compute action gradients
@@ -230,7 +227,7 @@ class DDPG():
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         #Replay memory
-        self.buffer_size = int(1e6)
+        self.buffer_size = int(1e5)
         self.batch_size = 64
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
@@ -238,24 +235,24 @@ class DDPG():
         self.gamma = 0.99 # dicount factor
         self.tau = 0.001 # for soft update of target parameters
 
-        self.best_score = -np.inf
+        self.best_rewards = -np.inf
 
 
     def reset_episode(self):
         self.noise.reset()
         state = self.task.reset()
         self.last_state = state
-        self.score = 0
+        self.total_rewards = 0
         return state
 
     def step(self, action, reward, next_state, done):
 
         # save experience
         self.memory.add(self.last_state, action, reward, next_state, done)
-        self.score += reward
+        self.total_rewards += reward
 
         if done:
-            self.best_score = max(self.best_score, self.score)
+            self.best_rewards = max(self.best_rewards, self.total_rewards)
 
         #Learn, if enough samples are available
         if len(self.memory) > self.batch_size:

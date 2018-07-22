@@ -1,10 +1,10 @@
 import gym
 import sys
 import numpy as np
-from agents.agent import DDPG
+from agents.agent_for_gym import DDPG
 
 # init anv and agent 
-env = gym.make('Pendulum-v0')
+env = gym.make('MountainCarContinuous-v0')
 agent = DDPG(env, True)
 
 # get trained weight

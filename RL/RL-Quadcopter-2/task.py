@@ -19,7 +19,7 @@ class Task():
         self.action_repeat = 3
 
         self.state_size = self.action_repeat * (len(self.sim.pose) + len(self.sim.v) + len(self.sim.angular_v))
-        self.action_low = 0
+        self.action_low = 800
         self.action_high = 900
         self.action_size = 4
         self.runtime = runtime
@@ -32,17 +32,19 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        # distance = self.compute_distance(self.sim.pose[:3], self.target_pos)
-        # self.z_bonus = self.sim.pose[2] - self.target_pos[2]
-        # z_diff = self.target_pos[2] - self.sim.pose[2]
-        # z_factor = self.z_bonus if z_diff <= 0 else 1.0
-        # reward = 1/(1+distance)
+        distance = self.compute_distance(self.sim.pose[:3], self.target_pos)
+        self.z_bonus = self.sim.pose[2] - self.target_pos[2]
+        z_diff = self.target_pos[2] - self.sim.pose[2]
+        z_factor = self.z_bonus if z_diff <= 0 else 1.0
+        reward = 1/(1+distance)*z_factor
 
         # reward = 1. - 0.3*(abs(self.sim.pose[:3]-self.target_pos)).sum()
 
-        reward = -min(abs(self.sim.pose[2]-self.target_pos[2]), 20.0)
-        if self.sim.pose[2] >= self.target_pos[2]:
-            reward += 10
+        # reward = -min(abs(self.sim.pose[2]-self.target_pos[2]), 20.0)
+        # if self.sim.pose[2] >= self.target_pos[2]:
+            # reward += 10
+
+        # reward = 1 - .1*((abs(self.sim.pose[:3]-self.target_pos)).sum())**2
 
         return reward
 
@@ -54,11 +56,6 @@ class Task():
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
             reward += self.get_reward()
 
-            if self.sim.pose[2] >= self.target_pos[2]:
-                done = True
-            elif self.sim.time > self.runtime:
-                reward -= 10.0
-                done = True
             states = np.concatenate((self.sim.pose, self.sim.v, self.sim.angular_v))
             pose_all.append(states)
         next_state = np.concatenate(pose_all)

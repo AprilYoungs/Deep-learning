@@ -74,7 +74,7 @@ class Actor:
             aciton_high (array):Max values of actions
         """
         self.state_size = state_size
-        self.aciton_size = action_size
+        self.action_size = action_size
         self.action_low = action_low
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
@@ -87,39 +87,28 @@ class Actor:
         """Build an actor (policy) network that maps states -> actions."""
         states = layers.Input(shape=(self.state_size, ), name='states')
 
-        net = layers.BatchNormalization()(states)
+        
+        # Kernel initializer with fan-in mode and scale of 1.0
+        kernel_initializer = initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
 
-        net = layers.Dense(units=16,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.state_size),1/np.sqrt(self.state_size)))(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=16,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=16,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(16),1/np.sqrt(16)))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
+        # Add hidden layers
+        net = layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
+        net = layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
+
+        # Add final output layer with sigmoid activation
+        raw_actions = layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
 
 
-        # narrow the network to the action size
-        raw_actions = layers.Dense(units=self.aciton_size,
-                                   kernel_initializer=initializers.random_uniform(-3e3,3e-3),
-                                   bias_initializer=initializers.random_uniform(-3e-4,3e-4),
-                                   activation='tanh',
-                                   name='raw_actions')(net)
 
         # Scale outpout to proper range
-        actions = layers.Lambda(lambda x: (x/2 * self.action_range) + (self.action_low + self.action_high)/2, name='actions')(raw_actions)
+        actions = layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
+            name='actions')(raw_actions)
 
         # Create Keras model
         self.model = models.Model(inputs=states, outputs=actions)
 
         # Define loss function using action value gradients
-        action_gradients = layers.Input(shape=(self.aciton_size, ))
+        action_gradients = layers.Input(shape=(self.action_size, ))
 
         #### Why this function ?? (Q value) gradients
         loss = K.mean(-action_gradients * actions)
@@ -158,30 +147,21 @@ class Critic:
         states = layers.Input(shape=(self.state_size, ), name='states')
         actions = layers.Input(shape=(self.action_size, ), name='actions')
 
-        net = layers.concatenate([states, actions])
-        net = layers.BatchNormalization()(net)
+        kernel_initializer = initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
 
-        net = layers.Dense(units=32,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size+self.state_size),1/np.sqrt(self.action_size+self.state_size)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(self.action_size+self.state_size),1/np.sqrt(self.action_size+self.state_size))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=32,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=32,
-                           kernel_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)),
-                           bias_initializer=initializers.random_uniform(-1/np.sqrt(32),1/np.sqrt(32)))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
+        # Add hidden layer(s) for state pathway
+        net_states = layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
 
-
-        Q_values = layers.Dense(units=1,
-                                kernel_initializer=initializers.random_uniform(-3e3,3e-3),
-                                bias_initializer=initializers.random_uniform(-3e-4,3e-4),
-                                name='q_values')(net)
+        # Add hidden layer(s) for action pathway
+        net_actions = layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(actions)
+        
+        # Combine state and action pathways. The two layers can first be processed via separate 
+        # "pathways" (mini sub-networks), but eventually need to be combined.
+        net = layers.Add()([net_states, net_actions])
+        
+        net = layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
+        
+        Q_values = layers.Dense(units=1, activation=None, name='q_values',kernel_initializer=kernel_initializer)(net)
 
         # Create keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
@@ -226,8 +206,8 @@ class DDPG():
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         #Replay memory
-        self.buffer_size = int(1e6)
-        self.batch_size = 64
+        self.buffer_size = int(1e4)
+        self.batch_size = 256
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
