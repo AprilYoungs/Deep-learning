@@ -18,7 +18,7 @@ class Task():
         self.sim = PhysicsSim(init_pose, init_velocities, init_angle_velocities, runtime)
         self.action_repeat = 3
 
-        self.state_size = self.action_repeat * (len(self.sim.pose) + len(self.sim.v) + len(self.sim.angular_v))
+        self.state_size = self.action_repeat * (len(self.sim.pose) + len(self.sim.v))
         self.action_low = 800
         self.action_high = 900
         self.action_size = 4
@@ -54,9 +54,15 @@ class Task():
         pose_all = []
         for _ in range(self.action_repeat):
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
-            reward += self.get_reward()
+            reward -= min(abs(self.target_pos[2] - self.sim.pose[2]), 10.0)  # reward = zero for matching target z, -ve as you go farther, upto -20
 
-            states = np.concatenate((self.sim.pose, self.sim.v, self.sim.angular_v))
+            if self.sim.pose[2] >= self.target_pos[2]:  # agent has crossed the target height
+                reward += 250.0  # bonus reward
+                done = True
+            elif self.sim.time > self.sim.runtime:  # agent has run out of time
+                reward -= 100.0  # extra penalty
+                done = True
+            states = np.concatenate((self.sim.pose, self.sim.v))
             pose_all.append(states)
         next_state = np.concatenate(pose_all)
         return next_state, reward, done
@@ -64,5 +70,5 @@ class Task():
     def reset(self):
         """Reset the sim to start a new episode."""
         self.sim.reset()
-        state = np.concatenate([self.sim.pose, self.sim.v, self.sim.angular_v] * self.action_repeat)
+        state = np.concatenate([self.sim.pose, self.sim.v] * self.action_repeat)
         return state

@@ -93,20 +93,22 @@ class Actor:
 
         # Add hidden layers
         net = BatchNormalization()(states)
-        net = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(states)
+        net = layers.Dense(units=400, kernel_initializer=kernel_initializer)(states)
         net = BatchNormalization()(net)
-        net = layers.Dense(units=300, activation='relu', kernel_initializer=kernel_initializer)(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=300, kernel_initializer=kernel_initializer)(net)
         net = BatchNormalization()(net)
-        
-        # Kernel initializer for final output layer: initialize final layer weights from 
+        net = layers.Activation('relu')(net)
+
+        # Kernel initializer for final output layer: initialize final layer weights from
         # a uniform distribution of [-0.003, 0.003]
         final_layer_initializer = initializers.RandomUniform(minval=-0.003, maxval=0.003, seed=None)
-        
+
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='tanh', name='raw_actions', kernel_initializer=final_layer_initializer)(net)
-        
+
         # final action
-        middle_value_of_action_range = self.action_low +self.action_range/2
+        middle_value_of_action_range = self.action_low + self.action_range/2
         actions = layers.Lambda(lambda x: (x * self.action_range) + middle_value_of_action_range,
             name='actions')(raw_actions)
 
@@ -158,30 +160,33 @@ class Critic:
         kernel_initializer = initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='uniform', seed=None)
         # Kernel L2 loss regularizer with penalization param of 0.01
         kernel_regularizer = regularizers.l2(0.01)
-        
+
+        # Kernel initializer for final output layer: initialize final layer weights from
+        # a uniform distribution of [-0.0003, 0.0003]
+        final_layer_initializer = initializers.RandomUniform(minval=-0.0003, maxval=0.0003, seed=None)
+
         # Add hidden layer(s) for state pathway
         net_states = BatchNormalization()(states)
-        net_states = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(net_states)
+        net_states = layers.Dense(units=400, kernel_initializer=kernel_initializer)(net_states)
         net_states = BatchNormalization()(net_states)
+        net_states = layers.Activation('relu')(net_states)
 
         # Add hidden layer(s) for action pathway
         net_actions = BatchNormalization()(actions)
-        net_actions = layers.Dense(units=400, activation='relu', kernel_initializer=kernel_initializer)(actions)
+        net_actions = layers.Dense(units=400, kernel_initializer=kernel_initializer)(actions)
         net_actions = BatchNormalization()(net_actions)
+        net_actions = layers.Activation('relu')(net_actions)
 
-        # Combine state and action pathways. The two layers can first be processed via separate 
+        # Combine state and action pathways. The two layers can first be processed via separate
         # "pathways" (mini sub-networks), but eventually need to be combined.
         net = layers.Add()([net_states, net_actions])
 
         # Add more layers to the combined network if needed
         net = layers.Dense(units=300, activation='relu', kernel_initializer=kernel_initializer)(net)
 
-        # Kernel initializer for final output layer: initialize final layer weights from 
-        # a uniform distribution of [-0.003, 0.003]
-        final_layer_initializer = initializers.RandomUniform(minval=-0.003, maxval=0.003, seed=None)
-        
-        # Add final output layer to produce action values (Q values). The final output 
-        # of this model is the Q-value for any given (state, action) pair. Use a 
+
+        # Add final output layer to produce action values (Q values). The final output
+        # of this model is the Q-value for any given (state, action) pair. Use a
         # kernel L2 loss regularizer at this layer as well, with L2=0.01
         Q_values = layers.Dense(units=1, activation=None, name='q_values', kernel_initializer=final_layer_initializer, kernel_regularizer=kernel_regularizer)(net)
 
@@ -233,7 +238,7 @@ class DDPG():
 
         # Algorithm parameters
         self.gamma = 0.99 # dicount factor
-        self.tau = 0.001 # for soft update of target parameters
+        self.tau = 0.01 # for soft update of target parameters
 
         self.best_rewards = -np.inf
 
@@ -255,7 +260,7 @@ class DDPG():
             self.best_rewards = max(self.best_rewards, self.total_rewards)
 
         #Learn, if enough samples are available
-        if len(self.memory) > self.batch_size:
+        if len(self.memory) > self.buffer_size*0.1: # warm up
             experiences = self.memory.sample()
             self.learn(experiences)
 
