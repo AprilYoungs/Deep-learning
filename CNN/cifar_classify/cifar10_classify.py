@@ -7,7 +7,7 @@ import time
 import os
 import shutil
 
-epoch = 2
+epoch = 2000
 batch_size = 128
 
 tensor_borad_path = "/tmp/cifar10"

@@ -1,0 +1,2 @@
+model_checkpoint_path: "cifar_saved_session"
+all_model_checkpoint_paths: "cifar_saved_session"
